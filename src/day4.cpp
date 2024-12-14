@@ -43,10 +43,29 @@ std::size_t count_xmas(const std::vector<std::string> input) {
     return num_xmas;
 }
 
+bool is_mas(char a, char b, char c) {
+    return (a == 'M' && b == 'A' && c == 'S') || (a == 'S' && b == 'A' && c == 'M');
+}
+
+std::size_t count_mas(const std::vector<std::string> input) {
+    const auto num_rows = input.size();
+    const auto num_cols = input.front().size();
+
+    std::size_t num_mas = 0;
+    for (std::size_t row = 0; row + 2 < num_rows; row++) {
+        for (std::size_t col = 0; col + 2 < num_cols; col++) {
+            num_mas += is_mas(input[row][col], input[row + 1][col + 1], input[row + 2][col + 2]) &&
+                       is_mas(input[row + 2][col], input[row + 1][col + 1], input[row][col + 2]);
+        }
+    }
+    return num_mas;
+}
+
 int main() {
     const auto input = read_input(std::cin);
 
     std::clog << "Part 1: " << count_xmas(input) << "\n";
+    std::clog << "Part 2: " << count_mas(input) << "\n";
 
     return 0;
 }
