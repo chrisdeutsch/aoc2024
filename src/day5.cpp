@@ -38,13 +38,10 @@ std::pair<std::vector<rule>, std::vector<pages>> read_input(std::istream &istrea
 }
 
 std::optional<bool> less_than(const std::string &lhs, const std::string &rhs,
-                              const std::vector<rule> &rules) {
-    for (const auto &rule : rules) {
-        if (lhs == rule.lhs && rhs == rule.rhs) {
-            return true;
-        } else if (lhs == rule.rhs && rhs == rule.lhs) {
-            return false;
-        }
+                              const std::map<std::pair<std::string, std::string>, bool> &rules) {
+    const auto it = rules.find(std::make_pair(lhs, rhs));
+    if (it != rules.cend()) {
+        return it->second;
     }
     return {};
 }
@@ -52,8 +49,14 @@ std::optional<bool> less_than(const std::string &lhs, const std::string &rhs,
 int main() {
     const auto [rules, manuals] = read_input(std::cin);
 
-    auto fn_comp = [&rules](const auto &lhs, const auto &rhs) {
-        auto lt = less_than(lhs, rhs, rules);
+    std::map<std::pair<std::string, std::string>, bool> rulemap;
+    for (const auto &rule : rules) {
+        rulemap[std::make_pair(rule.lhs, rule.rhs)] = true;
+        rulemap[std::make_pair(rule.rhs, rule.lhs)] = false;
+    }
+
+    auto fn_comp = [&rulemap](const auto &lhs, const auto &rhs) {
+        auto lt = less_than(lhs, rhs, rulemap);
         if (!lt) {
             throw std::runtime_error("Encountered unknown comparison");
         }
