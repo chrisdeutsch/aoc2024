@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <iostream>
+#include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -8,6 +10,11 @@ struct guard_pos {
     int col;
     int dir_row;
     int dir_col;
+
+    bool operator<(const guard_pos &other) const {
+        return std::tie(this->row, this->col, this->dir_row, this->dir_col) <
+               std::tie(other.row, other.col, other.dir_row, other.dir_col);
+    }
 };
 
 std::pair<std::vector<std::vector<bool>>, guard_pos> read_input(std::istream &istream) {
@@ -36,8 +43,9 @@ std::pair<std::vector<std::vector<bool>>, guard_pos> read_input(std::istream &is
     return std::make_pair(obstructions, guard);
 }
 
-std::vector<std::vector<bool>> walk(guard_pos guard,
-                                    const std::vector<std::vector<bool>> &obstructions) {
+// std::vector<std::vector<bool>>
+std::optional<std::size_t> walk(guard_pos guard,
+                                const std::vector<std::vector<bool>> &obstructions) {
     const auto n_rows = obstructions.size();
     const auto n_cols = obstructions.front().size();
 
@@ -45,12 +53,13 @@ std::vector<std::vector<bool>> walk(guard_pos guard,
     for (std::size_t i; i < n_rows; i++) {
         visited.emplace_back(n_cols);
     }
+    visited[guard.row][guard.col] = true;
+
+    std::set<guard_pos> prev_pos;
 
     auto is_valid_pos = [n_rows, n_cols](int row, int col) {
         return 0 <= row && row < n_rows && 0 <= col && col < n_cols;
     };
-
-    visited[guard.row][guard.col] = true;
 
     while (true) {
         guard_pos next = {
@@ -64,6 +73,7 @@ std::vector<std::vector<bool>> walk(guard_pos guard,
         const auto is_obstruction = obstructions[next.row][next.col];
 
         if (!is_valid) {
+            // Walked off map
             break;
         }
         if (is_obstruction) {
@@ -77,14 +87,14 @@ std::vector<std::vector<bool>> walk(guard_pos guard,
 
         guard = next;
         visited[guard.row][guard.col] = true;
+
+        // Loop detection
+        if (prev_pos.find(guard) != prev_pos.cend()) {
+            return {};
+        } else {
+            prev_pos.insert(guard);
+        }
     }
-
-    return visited;
-}
-
-int main() {
-    const auto [obstructions, guard] = read_input(std::cin);
-    const auto visited = walk(guard, obstructions);
 
     std::size_t num_visited = 0;
     for (const auto &row : visited) {
@@ -95,6 +105,36 @@ int main() {
         }
     }
 
+    return num_visited;
+}
+
+int main() {
+    auto [obstructions, guard] = read_input(std::cin);
+    const auto num_visited = *walk(guard, obstructions);
     std::clog << "Part 1: " << num_visited << "\n";
+
+    std::size_t num_loops = 0;
+    const auto num_rows = obstructions.size();
+    const auto num_cols = obstructions.front().size();
+    for (std::size_t row = 0; row < num_rows; row++) {
+        for (std::size_t col = 0; col < num_cols; col++) {
+            if (row == guard.row && col == guard.col) {
+                continue;
+            }
+            if (obstructions[row][col]) {
+                // Nothing to do
+                continue;
+            }
+
+            obstructions[row][col] = true;
+            if (!walk(guard, obstructions)) {
+                num_loops += 1;
+            }
+            obstructions[row][col] = false;
+        }
+    }
+
+    std::clog << "Part 2: " << num_loops << "\n";
+
     return 0;
 }
