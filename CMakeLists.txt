@@ -23,3 +23,4 @@ add_executable(day7 src/day7.cpp)
 target_link_libraries(day7 absl::strings)
 
 add_executable(day8 src/day8.cpp)
+add_executable(day9 src/day9.cpp)
