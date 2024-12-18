@@ -1,7 +1,8 @@
+#include <algorithm>
 #include <iostream>
 #include <print>
+#include <ranges>
 #include <set>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -21,7 +22,11 @@ struct tile {
     std::size_t row;
     std::size_t col;
 
-    std::size_t num_neighbors = 0;
+    bool has_north = false;
+    bool has_east = false;
+    bool has_south = false;
+    bool has_west = false;
+
     bool operator<(const tile &other) const {
         return std::tie(this->row, this->col) < std::tie(other.row, other.col);
     }
@@ -50,25 +55,25 @@ std::vector<tile> get_region(std::size_t start_row, std::size_t start_col,
         if (t.row >= 1 && plot[t.row - 1][t.col] == tile_value) {
             stack.emplace_back(
                 tile{.value = plot[t.row - 1][t.col], .row = t.row - 1, .col = t.col});
-            ++t.num_neighbors;
+            t.has_north = true;
         }
         // East
         if (t.col + 1 < num_cols && plot[t.row][t.col + 1] == tile_value) {
             stack.emplace_back(
                 tile{.value = plot[t.row][t.col + 1], .row = t.row, .col = t.col + 1});
-            ++t.num_neighbors;
+            t.has_east = true;
         }
         // South
         if (t.row + 1 < num_rows && plot[t.row + 1][t.col] == tile_value) {
             stack.emplace_back(
                 tile{.value = plot[t.row + 1][t.col], .row = t.row + 1, .col = t.col});
-            ++t.num_neighbors;
+            t.has_south = true;
         }
         // West
         if (t.col >= 1 && plot[t.row][t.col - 1] == tile_value) {
             stack.emplace_back(
                 tile{.value = plot[t.row][t.col - 1], .row = t.row, .col = t.col - 1});
-            ++t.num_neighbors;
+            t.has_west = true;
         }
 
         region.push_back(t);
@@ -102,11 +107,16 @@ std::vector<std::vector<tile>> get_all_regions(const garden_plot &plot) {
     return regions;
 }
 
-std::size_t get_perimeter(std::vector<tile> region) {
+std::size_t get_perimeter(const std::vector<tile> &region) {
     std::size_t total = 0;
     for (const auto &t : region) {
-        total += 4 - t.num_neighbors;
+        total += !t.has_north + !t.has_east + !t.has_south + !t.has_west;
     }
+    return total;
+}
+
+std::size_t get_sides(const std::vector<tile> &region) {
+    std::size_t total = 0;
     return total;
 }
 
@@ -115,14 +125,20 @@ int main() {
     const auto regions = get_all_regions(plot);
 
     std::size_t total_fence = 0;
+    std::size_t total_fence_discounted = 0;
     for (const auto &region : regions) {
         const auto area = region.size();
         const auto perimeter = get_perimeter(region);
+        const auto sides = get_sides(region);
 
         total_fence += area * perimeter;
+        total_fence_discounted += area * sides;
+
+        std::println("Region {} has sides {}", region.front().value, sides);
     }
 
     std::println("Part 1: {}", total_fence);
+    std::println("Part 2: {}", total_fence_discounted);
 
     return 0;
 }
