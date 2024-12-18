@@ -1,7 +1,7 @@
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <iostream>
 #include <set>
+#include <vector>
 
 using topographic_map = std::vector<std::vector<std::size_t>>;
 
@@ -13,7 +13,8 @@ topographic_map read_input(std::istream &istream) {
         std::vector<std::size_t> heights;
         heights.reserve(line.size());
 
-        std::transform(line.cbegin(), line.cend(), std::back_inserter(heights), [](char c) { return static_cast<std::size_t>(c - '0'); });
+        std::transform(line.cbegin(), line.cend(), std::back_inserter(heights),
+                       [](char c) { return static_cast<std::size_t>(c - '0'); });
         map.emplace_back(std::move(heights));
     }
     return map;
@@ -28,7 +29,8 @@ void print_map(const topographic_map &map) {
     }
 }
 
-std::vector<std::pair<std::size_t, std::size_t>> step(std::size_t row, std::size_t col, const topographic_map &map) {
+std::vector<std::pair<std::size_t, std::size_t>> step(std::size_t row, std::size_t col,
+                                                      const topographic_map &map) {
     const auto height = map[row][col];
     if (height == 9) {
         return {std::make_pair(row, col)};
@@ -60,7 +62,6 @@ std::vector<std::pair<std::size_t, std::size_t>> step(std::size_t row, std::size
     return peaks;
 }
 
-
 int main() {
     const auto map = read_input(std::cin);
 
@@ -73,7 +74,8 @@ int main() {
                 continue;
             }
             const auto trail_endings = step(row, col, map);
-            const std::set<decltype(trail_endings)::value_type> unique_trail_endings(trail_endings.cbegin(), trail_endings.cend());
+            const std::set<decltype(trail_endings)::value_type> unique_trail_endings(
+                trail_endings.cbegin(), trail_endings.cend());
 
             const auto trailhead_score = unique_trail_endings.size();
             const auto trailhead_rating = trail_endings.size();

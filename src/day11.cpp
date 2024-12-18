@@ -1,10 +1,10 @@
-#include <iostream>
-#include <iterator>
-#include <vector>
 #include <algorithm>
 #include <cmath>
-#include <variant>
+#include <iostream>
+#include <iterator>
 #include <map>
+#include <variant>
+#include <vector>
 
 using IntType = long long;
 
@@ -29,7 +29,7 @@ std::size_t get_num_digits(IntType num) {
 
 IntType intpow(IntType base, std::size_t exp) {
     IntType result = 1;
-    for (; exp > 0; --exp){
+    for (; exp > 0; --exp) {
         result *= base;
     }
     return result;
@@ -49,7 +49,8 @@ std::variant<IntType, std::pair<IntType, IntType>> blink(IntType stone) {
     return 2024 * stone;
 }
 
-std::vector<IntType> blink(std::vector<IntType>::const_iterator begin, std::vector<IntType>::const_iterator end) {
+std::vector<IntType> blink(std::vector<IntType>::const_iterator begin,
+                           std::vector<IntType>::const_iterator end) {
     std::vector<IntType> stones;
     stones.reserve(2 * std::distance(begin, end));
 
@@ -57,8 +58,7 @@ std::vector<IntType> blink(std::vector<IntType>::const_iterator begin, std::vect
         auto result = blink(*it);
         if (const auto ptr = std::get_if<IntType>(&result)) {
             stones.push_back(*ptr);
-        }
-        else if (const auto ptr = std::get_if<std::pair<IntType, IntType>>(&result)) {
+        } else if (const auto ptr = std::get_if<std::pair<IntType, IntType>>(&result)) {
             stones.push_back(ptr->first);
             stones.push_back(ptr->second);
         }
@@ -66,7 +66,8 @@ std::vector<IntType> blink(std::vector<IntType>::const_iterator begin, std::vect
     return stones;
 }
 
-std::size_t count_stones(IntType stone, std::size_t depth, std::size_t depth_limit, std::map<std::pair<IntType, std::size_t>, std::size_t> &mem) {
+std::size_t count_stones(IntType stone, std::size_t depth, std::size_t depth_limit,
+                         std::map<std::pair<IntType, std::size_t>, std::size_t> &mem) {
     // Memoized?
     const auto key = std::make_pair(stone, depth);
     if (const auto it = mem.find(key); it != mem.cend()) {
@@ -83,7 +84,8 @@ std::size_t count_stones(IntType stone, std::size_t depth, std::size_t depth_lim
             num_stones = count_stones(*result_ptr, depth + 1, depth_limit, mem);
         }
         if (const auto result_ptr = std::get_if<std::pair<IntType, IntType>>(&result)) {
-            num_stones = count_stones(result_ptr->first, depth + 1, depth_limit, mem) + count_stones(result_ptr->second, depth + 1, depth_limit, mem);
+            num_stones = count_stones(result_ptr->first, depth + 1, depth_limit, mem) +
+                         count_stones(result_ptr->second, depth + 1, depth_limit, mem);
         }
     }
 
