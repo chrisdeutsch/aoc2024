@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <iostream>
 #include <print>
-#include <ranges>
 #include <set>
 #include <string>
 #include <vector>
@@ -115,9 +114,62 @@ std::size_t get_perimeter(const std::vector<tile> &region) {
     return total;
 }
 
+std::size_t get_north_or_south_sides(std::vector<tile> edges) {
+    std::sort(edges.begin(), edges.end(), [](const tile &lhs, const tile &rhs) {
+        return std::tie(lhs.row, lhs.col) < std::tie(rhs.row, rhs.col);
+    });
+
+    std::size_t sides = 1;
+    if (edges.size() > 1) {
+        for (auto it1 = edges.cbegin(), it2 = edges.cbegin() + 1; it2 != edges.cend();
+             ++it1, ++it2) {
+            if (it1->row != it2->row || it2->col - it1->col > 1) {
+                ++sides;
+            }
+        }
+    }
+    return sides;
+}
+
+std::size_t get_east_or_west_sides(std::vector<tile> edges) {
+    std::sort(edges.begin(), edges.end(), [](const tile &lhs, const tile &rhs) {
+        return std::tie(lhs.col, lhs.row) < std::tie(rhs.col, rhs.row);
+    });
+
+    std::size_t sides = 1;
+    if (edges.size() > 1) {
+        for (auto it1 = edges.cbegin(), it2 = edges.cbegin() + 1; it2 != edges.cend();
+             ++it1, ++it2) {
+            if (it1->col != it2->col || it2->row - it1->row > 1) {
+                ++sides;
+            }
+        }
+    }
+    return sides;
+}
+
 std::size_t get_sides(const std::vector<tile> &region) {
-    std::size_t total = 0;
-    return total;
+    std::vector<tile> north_edges;
+    std::copy_if(region.cbegin(), region.cend(), std::back_inserter(north_edges),
+                 [](const auto &t) { return !t.has_north; });
+    const auto north_sides = get_north_or_south_sides(north_edges);
+
+    std::vector<tile> south_edges;
+    std::copy_if(region.cbegin(), region.cend(), std::back_inserter(south_edges),
+                 [](const auto &t) { return !t.has_south; });
+    const auto south_sides = get_north_or_south_sides(south_edges);
+
+    std::vector<tile> east_edges;
+    std::copy_if(region.cbegin(), region.cend(), std::back_inserter(east_edges),
+                 [](const auto &t) { return !t.has_east; });
+    const auto east_sides = get_east_or_west_sides(east_edges);
+
+    std::vector<tile> west_edges;
+    std::copy_if(region.cbegin(), region.cend(), std::back_inserter(west_edges),
+                 [](const auto &t) { return !t.has_west; });
+    const auto west_sides = get_east_or_west_sides(west_edges);
+
+    return north_sides + east_sides + south_sides + west_sides;
 }
 
 int main() {
@@ -133,8 +185,6 @@ int main() {
 
         total_fence += area * perimeter;
         total_fence_discounted += area * sides;
-
-        std::println("Region {} has sides {}", region.front().value, sides);
     }
 
     std::println("Part 1: {}", total_fence);
