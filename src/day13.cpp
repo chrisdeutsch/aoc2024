@@ -6,21 +6,7 @@
 struct vec2u {
     std::size_t x;
     std::size_t y;
-
-    constexpr vec2u operator+(const vec2u &other) const {
-        return {.x = x + other.x, .y = y + other.y};
-    }
-
-    constexpr vec2u operator-(const vec2u &other) const {
-        return {.x = x - other.x, .y = y - other.y};
-    }
-
-    constexpr vec2u operator*(std::size_t scalar) const { return {scalar * x, scalar * y}; }
-
-    constexpr bool operator==(const vec2u &other) const { return x == other.x && y == other.y; }
 };
-
-constexpr vec2u operator*(std::size_t scalar, const vec2u &vec) { return vec * scalar; }
 
 struct game {
     vec2u button_a;
@@ -54,47 +40,30 @@ std::vector<game> read_input(std::istream &istream) {
     return games;
 }
 
+long det(long a, long b, long c, long d) { return a * d - b * c; }
+
 std::optional<std::size_t> solve_game_min_cost(const game &g) {
-    std::optional<std::size_t> sol_a;
-    std::optional<std::size_t> sol_b;
-
-    // a
-    {
-        const auto a = g.button_b.x * g.prize.y;
-        const auto b = g.prize.x * g.button_b.y;
-        const auto c = g.button_b.x * g.button_a.y;
-        const auto d = g.button_a.x * g.button_b.y;
-
-        if (c != d) {
-            if (a > b && c > d && (a - b) % (c - d) == 0) {
-                sol_a = (a - b) / (c - d);
-            } else if (a < b && c < d && (b - a) % (d - c) == 0) {
-                sol_a = (b - a) / (d - c);
-            } else {
-            }
-        }
+    const auto D = det(g.button_a.x, g.button_b.x, g.button_a.y, g.button_b.y);
+    if (D == 0) {
+        // No solution
+        return {};
     }
 
-    // b
-    {
-        const auto a = g.button_a.x * g.prize.y;
-        const auto b = g.prize.x * g.button_a.y;
-        const auto c = g.button_a.x * g.button_b.y;
-        const auto d = g.button_b.x * g.button_a.y;
-
-        if (c != d) {
-            if (a > b && c > d && (a - b) % (c - d) == 0) {
-                sol_b = (a - b) / (c - d);
-            } else if (a < b && c < d && (b - a) % (d - c) == 0) {
-                sol_b = (b - a) / (d - c);
-            }
-        }
+    const auto D_a = det(g.prize.x, g.button_b.x, g.prize.y, g.button_b.y);
+    if (D_a % D != 0) {
+        // No integer solution
+        return {};
     }
 
-    if (sol_a && sol_b) {
-        return 3 * *sol_a + *sol_b;
+    const auto D_b = det(g.button_a.x, g.prize.x, g.button_a.y, g.prize.y);
+    if (D_b % D != 0) {
+        // No integer solution
+        return {};
     }
-    return {};
+
+    const auto a = D_a / D;
+    const auto b = D_b / D;
+    return 3 * a + b;
 }
 
 int main() {
