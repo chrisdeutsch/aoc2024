@@ -55,54 +55,70 @@ std::vector<game> read_input(std::istream &istream) {
 }
 
 std::optional<std::size_t> solve_game_min_cost(const game &g) {
-    std::size_t min_cost = std::numeric_limits<std::size_t>::max();
-    std::size_t na = 0;
-    while (true) {
-        const auto a = na * g.button_a;
-        if (g.prize.x < a.x || g.prize.y < a.y) {
-            // No more solutions
-            break;
-        }
+    std::optional<std::size_t> sol_a;
+    std::optional<std::size_t> sol_b;
 
-        // We need b = nb * vecb = prize
-        const auto delta = g.prize - a;
-        const auto nb = delta.x / g.button_b.x;
-        if (nb * g.button_b == delta) {
-            const auto cost = 3 * na + nb;
-            min_cost = std::min(min_cost, cost);
+    // a
+    {
+        const auto a = g.button_b.x * g.prize.y;
+        const auto b = g.prize.x * g.button_b.y;
+        const auto c = g.button_b.x * g.button_a.y;
+        const auto d = g.button_a.x * g.button_b.y;
+
+        if (c != d) {
+            if (a > b && c > d && (a - b) % (c - d) == 0) {
+                sol_a = (a - b) / (c - d);
+            } else if (a < b && c < d && (b - a) % (d - c) == 0) {
+                sol_a = (b - a) / (d - c);
+            } else {
+            }
         }
-        ++na;
     }
 
-    if (min_cost == std::numeric_limits<std::size_t>::max()) {
-        return {};
+    // b
+    {
+        const auto a = g.button_a.x * g.prize.y;
+        const auto b = g.prize.x * g.button_a.y;
+        const auto c = g.button_a.x * g.button_b.y;
+        const auto d = g.button_b.x * g.button_a.y;
+
+        if (c != d) {
+            if (a > b && c > d && (a - b) % (c - d) == 0) {
+                sol_b = (a - b) / (c - d);
+            } else if (a < b && c < d && (b - a) % (d - c) == 0) {
+                sol_b = (b - a) / (d - c);
+            }
+        }
     }
 
-    return min_cost;
+    if (sol_a && sol_b) {
+        return 3 * *sol_a + *sol_b;
+    }
+    return {};
 }
 
 int main() {
     const auto games = read_input(std::cin);
 
-    std::size_t total = 0;
-    for (const auto &game : games) {
-        const auto min_cost = solve_game_min_cost(game);
+    std::size_t total_pt1 = 0;
+    std::size_t total_pt2 = 0;
+    for (const auto &g : games) {
+        const auto min_cost = solve_game_min_cost(g);
         if (min_cost) {
-            total += *min_cost;
+            total_pt1 += *min_cost;
+        }
+
+        game game_pt2 = g;
+        game_pt2.prize.x += 10000000000000uz;
+        game_pt2.prize.y += 10000000000000uz;
+        const auto min_cost_pt2 = solve_game_min_cost(game_pt2);
+        if (min_cost_pt2) {
+            total_pt2 += *min_cost_pt2;
         }
     }
 
-    std::println("Part 1: {}", total);
-
-    // ILP (Integer Linear Programming)?
-    //
-    // minimize cost(n_a, n_b) = n_a * 3 + n_b * 1
-    //
-    // subject to
-    //
-    // prize = n_a * da + n_b * db
-    // -> prize_x = n_a * da_x + n_b * db_x
-    // -> prize_y = n_a * da_y + n_b * db_y
+    std::println("Part 1: {}", total_pt1);
+    std::println("Part 2: {}", total_pt2);
 
     return 0;
 }
