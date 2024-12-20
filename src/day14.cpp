@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <print>
@@ -89,6 +90,23 @@ std::size_t safety_factor(const std::vector<robot_state> &robots, std::size_t wi
     return q0 * q1 * q2 * q3;
 }
 
+std::pair<float, float> robot_variance(const std::vector<robot_state> &robots) {
+    const auto N = robots.size();
+
+    float xbar = 0, ybar = 0;
+    for (const auto &robot : robots) {
+        xbar += static_cast<float>(robot.px) / N;
+        ybar += static_cast<float>(robot.py) / N;
+    }
+
+    float varx = 0, vary = 0;
+    for (const auto &robot : robots) {
+        varx += std::pow(static_cast<float>(robot.px) - xbar, 2) / N;
+        vary += std::pow(static_cast<float>(robot.py) - ybar, 2) / N;
+    }
+    return {varx, vary};
+}
+
 int main() {
     const auto width = 101uz;
     const auto height = 103uz;
@@ -98,6 +116,21 @@ int main() {
     const auto sf = safety_factor(robots_after_100, width, height);
 
     std::println("Part 1: {}", sf);
+
+    auto seconds = 0uz;
+    auto robots_step = robots;
+    while (seconds < 100000) {
+        robots_step = simulate_n(robots_step, 1, width, height);
+        ++seconds;
+
+        const auto [varx, vary] = robot_variance(robots_step);
+        if (varx < 500 && vary < 500) {
+            std::println("seconds = {} varx = {} vary = {}", seconds, varx, vary);
+            break;
+        }
+    }
+    print_robots(width, height, robots_step);
+    std::println("Part 2: {}", seconds);
 
     return 0;
 }
