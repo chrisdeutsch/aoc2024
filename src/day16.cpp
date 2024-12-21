@@ -106,6 +106,30 @@ void print_maze(const auto &m) {
     }
 }
 
+void push_path_to_heap(const auto &candidate_path, orientation orient, std::vector<path> &paths) {
+    const auto number_of_turns = get_number_of_turns(candidate_path.orient, orient);
+    const auto new_cost = candidate_path.cost + 1000 * number_of_turns + 1;
+
+    auto [row, col] = candidate_path.pos;
+    switch (orient) {
+    case orientation::north:
+        row -= 1;
+        break;
+    case orientation::east:
+        col += 1;
+        break;
+    case orientation::south:
+        row += 1;
+        break;
+    case orientation::west:
+        col -= 1;
+        break;
+    }
+
+    paths.emplace_back(path{.pos = {.row = row, .col = col}, .orient = orient, .cost = new_cost});
+    std::push_heap(paths.begin(), paths.end(), std::greater<>());
+}
+
 std::size_t solve_maze(const maze &m) {
     std::vector<path> paths;
     paths.emplace_back(path{.pos = m.start, .orient = orientation::east, .cost = 0});
@@ -133,47 +157,19 @@ std::size_t solve_maze(const maze &m) {
 
         // North
         if (!m.walls.contains({row - 1, col})) {
-            const auto number_of_turns =
-                get_number_of_turns(candidate_path.orient, orientation::north);
-            const auto new_cost = candidate_path.cost + 1000 * number_of_turns + 1;
-
-            paths.emplace_back(path{.pos = {.row = row - 1, .col = col},
-                                    .orient = orientation::north,
-                                    .cost = new_cost});
-            std::push_heap(paths.begin(), paths.end(), std::greater<>());
+            push_path_to_heap(candidate_path, orientation::north, paths);
         }
         // East
         if (!m.walls.contains({row, col + 1})) {
-            const auto number_of_turns =
-                get_number_of_turns(candidate_path.orient, orientation::east);
-            const auto new_cost = candidate_path.cost + 1000 * number_of_turns + 1;
-
-            paths.emplace_back(path{.pos = {.row = row, .col = col + 1},
-                                    .orient = orientation::east,
-                                    .cost = new_cost});
-            std::push_heap(paths.begin(), paths.end(), std::greater<>());
+            push_path_to_heap(candidate_path, orientation::east, paths);
         }
         // South
         if (!m.walls.contains({row + 1, col})) {
-            const auto number_of_turns =
-                get_number_of_turns(candidate_path.orient, orientation::south);
-            const auto new_cost = candidate_path.cost + 1000 * number_of_turns + 1;
-
-            paths.emplace_back(path{.pos = {.row = row + 1, .col = col},
-                                    .orient = orientation::south,
-                                    .cost = new_cost});
-            std::push_heap(paths.begin(), paths.end(), std::greater<>());
+            push_path_to_heap(candidate_path, orientation::south, paths);
         }
         // West
         if (!m.walls.contains({row, col - 1})) {
-            const auto number_of_turns =
-                get_number_of_turns(candidate_path.orient, orientation::west);
-            const auto new_cost = candidate_path.cost + 1000 * number_of_turns + 1;
-
-            paths.emplace_back(path{.pos = {.row = row, .col = col - 1},
-                                    .orient = orientation::west,
-                                    .cost = new_cost});
-            std::push_heap(paths.begin(), paths.end(), std::greater<>());
+            push_path_to_heap(candidate_path, orientation::west, paths);
         }
     }
 }
@@ -187,10 +183,8 @@ void print_vec(std::vector<path> vec) {
 
 int main() {
     const auto m = read_input(std::cin);
-    print_maze(m);
-
     const auto min_cost = solve_maze(m);
-    std::println("min cost: {}", min_cost);
+    std::println("Part 1: {}", min_cost);
 
     return 0;
 }
