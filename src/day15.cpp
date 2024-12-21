@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <iostream>
 #include <print>
+#include <ranges>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 enum class tile_type {
@@ -14,27 +16,8 @@ enum class tile_type {
     big_box_right = ']',
 };
 
-enum class move {
-    north = '^',
-    east = '>',
-    south = 'v',
-    west = '<',
-};
-
-using grid = std::vector<std::vector<tile_type>>;
-
-grid read_grid(std::istream &istream) {
-    grid g;
-
-    std::string line;
-    while (std::getline(istream, line) && line != "") {
-        std::vector<tile_type> row;
-        row.reserve(line.size());
-        std::transform(line.cbegin(), line.cend(), std::back_inserter(row),
-                       [](char ch) { return static_cast<tile_type>(ch); });
-        g.emplace_back(std::move(row));
-    }
-    return g;
+constexpr bool is_box(tile_type t) {
+    return t == tile_type::box || t == tile_type::big_box_left || t == tile_type::big_box_right;
 }
 
 std::pair<tile_type, tile_type> to_wide_tile(tile_type t) {
@@ -55,9 +38,31 @@ std::pair<tile_type, tile_type> to_wide_tile(tile_type t) {
     throw std::runtime_error("cannot convert tile to wide tile");
 }
 
-grid convert_to_wide_grid(const grid &g) {
-    grid new_grid;
-    new_grid.reserve(g.size());
+enum class move_direction {
+    north = '^',
+    east = '>',
+    south = 'v',
+    west = '<',
+};
+
+using warehouse = std::vector<std::vector<tile_type>>;
+
+warehouse read_warehouse(std::istream &istream) {
+    warehouse g;
+
+    std::string line;
+    while (std::getline(istream, line) && line != "") {
+        auto row = line |
+                   std::views::transform([](char ch) { return static_cast<tile_type>(ch); }) |
+                   std::ranges::to<std::vector>();
+        g.emplace_back(std::move(row));
+    }
+    return g;
+}
+
+warehouse to_wide_warehouse(const warehouse &g) {
+    warehouse new_wh;
+    new_wh.reserve(g.size());
 
     for (const auto &row : g) {
         std::vector<tile_type> new_row;
@@ -69,27 +74,27 @@ grid convert_to_wide_grid(const grid &g) {
             new_row.push_back(right);
         }
 
-        new_grid.emplace_back(std::move(new_row));
+        new_wh.emplace_back(std::move(new_row));
     }
 
-    return new_grid;
+    return new_wh;
 }
 
-std::vector<move> read_moves(std::istream &istream) {
-    std::vector<move> moves;
+std::vector<move_direction> read_moves(std::istream &istream) {
+    std::vector<move_direction> moves;
 
     std::string line;
     while (std::getline(istream, line)) {
         std::transform(line.cbegin(), line.cend(), std::back_inserter(moves),
-                       [](char ch) { return static_cast<move>(ch); });
+                       [](char ch) { return static_cast<move_direction>(ch); });
     }
     return moves;
 }
 
-std::pair<std::size_t, std::size_t> find_robot(const grid &grid) {
-    for (std::size_t row = 0; row < grid.size(); ++row) {
-        for (std::size_t col = 0; col < grid[row].size(); ++col) {
-            if (grid[row][col] == tile_type::robot) {
+std::pair<std::size_t, std::size_t> find_robot(const warehouse &wh) {
+    for (std::size_t row = 0; row < wh.size(); ++row) {
+        for (std::size_t col = 0; col < wh[row].size(); ++col) {
+            if (wh[row][col] == tile_type::robot) {
                 return {row, col};
             }
         }
@@ -97,21 +102,21 @@ std::pair<std::size_t, std::size_t> find_robot(const grid &grid) {
     throw std::runtime_error("did not find robot");
 }
 
-std::pair<int, int> move_to_direction(move m) {
+constexpr std::pair<int, int> move_to_direction(move_direction m) {
     switch (m) {
-    case move::north:
+    case move_direction::north:
         return {-1, 0};
-    case move::east:
+    case move_direction::east:
         return {0, 1};
-    case move::south:
+    case move_direction::south:
         return {1, 0};
-    case move::west:
+    case move_direction::west:
         return {0, -1};
     }
-    throw std::runtime_error("Cannot convert move to direction");
+    std::unreachable();
 }
 
-bool move_box(std::size_t row, std::size_t col, move m, grid &g) {
+bool move_box(std::size_t row, std::size_t col, move_direction m, warehouse &wh) {
     using coordinates = std::pair<std::size_t, std::size_t>;
     const auto dir = move_to_direction(m);
 
@@ -129,28 +134,21 @@ bool move_box(std::size_t row, std::size_t col, move m, grid &g) {
         }
         visited.insert(coords);
 
-        const auto t = g[box_row][box_col];
-        switch (t) {
-        case tile_type::wall:
+        const auto t = wh[box_row][box_col];
+
+        if (t == tile_type::wall || t == tile_type::robot) {
             return false; // not movable
-        case tile_type::robot:
-            return false; // not movable
-        case tile_type::empty:
+        } else if (t == tile_type::empty) {
             continue;
-        case tile_type::box:
-            break;
-        case tile_type::big_box_left:
-            break;
-        case tile_type::big_box_right:
-            break;
         }
+        // Otherwise: must be a box, big_box_left, or big_box_right
         boxes.push_back({box_row, box_col});
 
-        const auto next_tile = g[box_row + dir.first][box_col + dir.second];
-        stack.push_back({box_row + dir.first, box_col + dir.second});
+        const auto next_tile = wh[box_row + dir.first][box_col + dir.second];
+        stack.emplace_back(box_row + dir.first, box_col + dir.second);
 
         // If we are moving east or west the matching box pair will have been added above
-        if (m == move::north || m == move::south) {
+        if (m == move_direction::north || m == move_direction::south) {
             if (t == tile_type::big_box_left) {
                 stack.push_back({box_row, box_col + 1});
                 stack.push_back({box_row + dir.first, box_col + dir.second + 1});
@@ -162,22 +160,21 @@ bool move_box(std::size_t row, std::size_t col, move m, grid &g) {
     }
 
     // Perform the move
-    grid new_grid = g;
+    warehouse new_wh = wh;
 
     for (const auto [row, col] : boxes) {
-        new_grid[row][col] = tile_type::empty;
+        new_wh[row][col] = tile_type::empty;
     }
     for (const auto [row, col] : boxes) {
-        new_grid[row + dir.first][col + dir.second] = g[row][col];
+        new_wh[row + dir.first][col + dir.second] = wh[row][col];
     }
 
-    g = std::move(new_grid);
-
+    wh = std::move(new_wh);
     return true;
 }
 
-void simulate(grid &grid, const std::vector<move> &moves) {
-    auto [robot_row, robot_col] = find_robot(grid);
+void simulate(warehouse &wh, const std::vector<move_direction> &moves) {
+    auto [robot_row, robot_col] = find_robot(wh);
 
     for (const auto m : moves) {
         const auto direction = move_to_direction(m);
@@ -185,20 +182,20 @@ void simulate(grid &grid, const std::vector<move> &moves) {
         std::size_t robot_dest_row = robot_row + direction.first;
         std::size_t robot_dest_col = robot_col + direction.second;
 
-        const auto dest_tile = grid[robot_dest_row][robot_dest_col];
+        const auto dest_tile = wh[robot_dest_row][robot_dest_col];
         if (dest_tile == tile_type::wall) {
             // Facing wall: do nothing
         } else if (dest_tile == tile_type::empty) {
             // Empty space: move one step
-            grid[robot_row][robot_col] = tile_type::empty;
-            grid[robot_dest_row][robot_dest_col] = tile_type::robot;
+            wh[robot_row][robot_col] = tile_type::empty;
+            wh[robot_dest_row][robot_dest_col] = tile_type::robot;
             robot_row = robot_dest_row;
             robot_col = robot_dest_col;
-        } else if (dest_tile == tile_type::box || dest_tile == tile_type::big_box_left ||
-                   dest_tile == tile_type::big_box_right) {
-            if (move_box(robot_dest_row, robot_dest_col, m, grid)) {
-                grid[robot_row][robot_col] = tile_type::empty;
-                grid[robot_dest_row][robot_dest_col] = tile_type::robot;
+        } else if (is_box(dest_tile)) {
+            if (move_box(robot_dest_row, robot_dest_col, m, wh)) {
+                // Boxes were moved -> move the robot
+                wh[robot_row][robot_col] = tile_type::empty;
+                wh[robot_dest_row][robot_dest_col] = tile_type::robot;
                 robot_row = robot_dest_row;
                 robot_col = robot_dest_col;
             }
@@ -206,19 +203,19 @@ void simulate(grid &grid, const std::vector<move> &moves) {
     }
 }
 
-std::size_t sum_of_box_gps_coordinates(const grid &grid) {
+std::size_t sum_of_box_gps_coordinates(const warehouse &wh) {
     std::size_t total = 0;
-    for (std::size_t row = 0; row < grid.size(); ++row) {
-        for (std::size_t col = 0; col < grid[row].size(); ++col) {
-            if (grid[row][col] == tile_type::box || grid[row][col] == tile_type::big_box_left) {
-                total += 100 * row + col;
+    for (const auto &[row_idx, row] : wh | std::views::enumerate) {
+        for (const auto &[col_idx, tile] : row | std::views::enumerate) {
+            if (tile == tile_type::box || tile == tile_type::big_box_left) {
+                total += 100 * row_idx + col_idx;
             }
         }
     }
     return total;
 }
 
-void print_grid(const grid &grid) {
+void print_grid(const warehouse &grid) {
     for (const auto &row : grid) {
         for (const auto tile : row) {
             std::print("{}", static_cast<char>(tile));
@@ -228,17 +225,17 @@ void print_grid(const grid &grid) {
 }
 
 int main() {
-    const auto grid = read_grid(std::cin);
+    const auto wh = read_warehouse(std::cin);
     const auto moves = read_moves(std::cin);
 
-    auto grid_copy = grid;
-    simulate(grid_copy, moves);
+    auto wh_clone = wh;
+    simulate(wh_clone, moves);
 
-    std::println("Part 1: {}", sum_of_box_gps_coordinates(grid_copy));
+    std::println("Part 1: {}", sum_of_box_gps_coordinates(wh_clone));
 
-    auto wide_grid = convert_to_wide_grid(grid);
-    simulate(wide_grid, moves);
+    auto wh_wide = to_wide_warehouse(wh);
+    simulate(wh_wide, moves);
 
-    std::println("Part 2: {}", sum_of_box_gps_coordinates(wide_grid));
+    std::println("Part 2: {}", sum_of_box_gps_coordinates(wh_wide));
     return 0;
 }
