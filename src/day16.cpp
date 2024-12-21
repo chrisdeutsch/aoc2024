@@ -32,6 +32,7 @@ struct path {
     position pos;
     orientation orient;
     std::size_t cost;
+    std::vector<position> pos_history;
 
     constexpr bool operator<(const path &other) const { return cost < other.cost; }
 
@@ -126,11 +127,20 @@ void push_path_to_heap(const auto &candidate_path, orientation orient, std::vect
         break;
     }
 
-    paths.emplace_back(path{.pos = {.row = row, .col = col}, .orient = orient, .cost = new_cost});
+    auto pos_history = candidate_path.pos_history;
+    pos_history.emplace_back(candidate_path.pos);
+
+    paths.emplace_back(path{.pos = {.row = row, .col = col},
+                            .orient = orient,
+                            .cost = new_cost,
+                            .pos_history = std::move(pos_history)});
     std::push_heap(paths.begin(), paths.end(), std::greater<>());
 }
 
-std::size_t solve_maze(const maze &m) {
+std::vector<path> solve_maze(const maze &m) {
+    std::vector<path> best_paths;
+    std::optional<std::size_t> best_cost;
+
     std::vector<path> paths;
     paths.emplace_back(path{.pos = m.start, .orient = orientation::east, .cost = 0});
     std::push_heap(paths.begin(), paths.end(), std::greater<>());
@@ -142,8 +152,13 @@ std::size_t solve_maze(const maze &m) {
         const auto candidate_path = paths.back();
         paths.pop_back();
 
+        if (best_cost && candidate_path.cost > *best_cost) {
+            break;
+        }
+
         if (candidate_path.pos == m.end) {
-            return candidate_path.cost;
+            best_paths.push_back(candidate_path);
+            best_cost = candidate_path.cost;
         }
 
         if (auto it = min_cost_by_location.find({candidate_path.pos, candidate_path.orient});
@@ -172,6 +187,8 @@ std::size_t solve_maze(const maze &m) {
             push_path_to_heap(candidate_path, orientation::west, paths);
         }
     }
+
+    return best_paths;
 }
 
 void print_vec(std::vector<path> vec) {
@@ -183,8 +200,19 @@ void print_vec(std::vector<path> vec) {
 
 int main() {
     const auto m = read_input(std::cin);
-    const auto min_cost = solve_maze(m);
-    std::println("Part 1: {}", min_cost);
+    const auto best_paths = solve_maze(m);
+
+    std::println("Part 1: {}", best_paths.front().cost);
+
+    std::set<position> visited_locations;
+    for (const auto &path : best_paths) {
+        for (const auto loc : path.pos_history) {
+            visited_locations.insert(loc);
+        }
+    }
+
+    // Add one because we have to count the end of the maze (which is not part of the path history)
+    std::println("Part 2: {}", visited_locations.size() + 1);
 
     return 0;
 }
