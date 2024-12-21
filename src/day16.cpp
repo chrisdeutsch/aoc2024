@@ -171,20 +171,21 @@ std::vector<path> solve_maze(const maze &m) {
 
         const auto [row, col] = candidate_path.pos;
 
+        // We disallow backtracking / 180 degree turns as this will always incur a higher cost
         // North
-        if (!m.walls.contains({row - 1, col})) {
+        if (candidate_path.orient != orientation::south && !m.walls.contains({row - 1, col})) {
             push_path_to_heap(candidate_path, orientation::north, paths);
         }
         // East
-        if (!m.walls.contains({row, col + 1})) {
+        if (candidate_path.orient != orientation::west && !m.walls.contains({row, col + 1})) {
             push_path_to_heap(candidate_path, orientation::east, paths);
         }
         // South
-        if (!m.walls.contains({row + 1, col})) {
+        if (candidate_path.orient != orientation::north && !m.walls.contains({row + 1, col})) {
             push_path_to_heap(candidate_path, orientation::south, paths);
         }
         // West
-        if (!m.walls.contains({row, col - 1})) {
+        if (candidate_path.orient != orientation::east && !m.walls.contains({row, col - 1})) {
             push_path_to_heap(candidate_path, orientation::west, paths);
         }
     }
