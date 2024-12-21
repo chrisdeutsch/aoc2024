@@ -159,6 +159,7 @@ std::vector<path> solve_maze(const maze &m) {
         if (candidate_path.pos == m.end) {
             best_paths.push_back(candidate_path);
             best_cost = candidate_path.cost;
+            continue;
         }
 
         if (auto it = min_cost_by_location.find({candidate_path.pos, candidate_path.orient});
@@ -204,6 +205,7 @@ int main() {
 
     std::println("Part 1: {}", best_paths.front().cost);
 
+    // TODO: Could use backtracking instead of brute force for part 2
     std::set<position> visited_locations;
     for (const auto &path : best_paths) {
         for (const auto loc : path.pos_history) {
