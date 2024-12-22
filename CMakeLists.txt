@@ -33,5 +33,5 @@ add_executable(day15 src/day15.cpp)
 add_executable(day16 src/day16.cpp)
 
 add_executable(day17 src/day17.cpp)
-target_link_libraries(day17 PRIVATE absl::strings -fsanitize=address,leak,undefined)
+target_link_libraries(day17 PRIVATE absl::strings)
 
