@@ -1,10 +1,11 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.30)
 
 project(aoc2024)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_CXX_STANDARD 23)
 
+find_package(Boost REQUIRED)
 find_package(absl REQUIRED)
 
 include_directories(src)
@@ -37,4 +38,7 @@ target_link_libraries(day17 PRIVATE absl::strings)
 
 add_executable(day18 src/day18.cpp)
 target_link_libraries(day18 PRIVATE absl::strings)
+
+add_executable(day19 src/day19.cpp)
+target_link_libraries(day19 PRIVATE absl::strings)
 
