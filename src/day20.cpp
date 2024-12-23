@@ -1,0 +1,151 @@
+#include <iostream>
+#include <map>
+#include <print>
+#include <ranges>
+#include <set>
+#include <string>
+#include <vector>
+
+struct position {
+    std::size_t row;
+    std::size_t col;
+    constexpr auto operator<=>(const position &other) const = default;
+};
+
+struct racetrack {
+    position start;
+    position end;
+    std::vector<position> track;
+};
+
+racetrack read_input(std::istream &is) {
+    std::optional<position> start;
+    std::optional<position> end;
+    std::vector<position> track;
+
+    std::string line;
+    std::size_t row = 0;
+    while (std::getline(is, line)) {
+        for (const auto [col, ch] : line | std::views::enumerate) {
+            if (ch == 'S') {
+                start = {row, static_cast<std::size_t>(col)};
+                track.emplace_back(*start);
+            } else if (ch == 'E') {
+                end = {row, static_cast<std::size_t>(col)};
+                track.emplace_back(*end);
+            } else if (ch == '.') {
+                track.emplace_back(row, col);
+            }
+        }
+        ++row;
+    }
+
+    if (!start || !end) {
+        throw std::runtime_error("Error parsing racetrack");
+    }
+
+    return {*start, *end, track};
+}
+
+std::vector<position> order_track_elements(const racetrack &rt) {
+    std::set<position> track_elements(rt.track.cbegin(), rt.track.cend());
+    std::vector<position> track_elements_ordered;
+
+    track_elements_ordered.push_back(rt.start);
+    track_elements.erase(rt.start);
+
+    auto pos = rt.start;
+    while (pos != rt.end) {
+        position new_pos;
+        // North
+        if (pos.row >= 1 && track_elements.contains({pos.row - 1, pos.col})) {
+            new_pos = {pos.row - 1, pos.col};
+        }
+        // East
+        if (track_elements.contains({pos.row, pos.col + 1})) {
+            new_pos = {pos.row, pos.col + 1};
+        }
+        // South
+        if (track_elements.contains({pos.row + 1, pos.col})) {
+            new_pos = {pos.row + 1, pos.col};
+        }
+        // West
+        if (pos.col >= 1 && track_elements.contains({pos.row, pos.col - 1})) {
+            new_pos = {pos.row, pos.col - 1};
+        }
+        track_elements_ordered.push_back(new_pos);
+        track_elements.erase(new_pos);
+        pos = new_pos;
+    }
+
+    if (track_elements.size() > 0) {
+        throw std::runtime_error("Error ordering racetrack");
+    }
+
+    return track_elements_ordered;
+}
+
+int main() {
+    auto rt = read_input(std::cin);
+    rt.track = order_track_elements(rt);
+
+    std::map<position, std::size_t> time_by_location;
+    for (const auto [time, track_element] : rt.track | std::views::enumerate) {
+        time_by_location[track_element] = time;
+    }
+
+    std::size_t num_cheats_ge_100ps = 0;
+
+    for (const auto [time, track_element] : rt.track | std::views::enumerate) {
+        // Cheat north
+        if (track_element.row >= 2 &&
+            time_by_location.contains({track_element.row - 2, track_element.col})) {
+            const auto nominal_time_at_location =
+                time_by_location[{track_element.row - 2, track_element.col}];
+            if (nominal_time_at_location > time + 2) {
+                // Good cheat north
+                if (nominal_time_at_location - time - 2 >= 100) {
+                    ++num_cheats_ge_100ps;
+                }
+            }
+        }
+        // Cheat east
+        if (time_by_location.contains({track_element.row, track_element.col + 2})) {
+            const auto nominal_time_at_location =
+                time_by_location[{track_element.row, track_element.col + 2}];
+            if (nominal_time_at_location > time + 2) {
+                // Good cheat east
+                if (nominal_time_at_location - time - 2 >= 100) {
+                    ++num_cheats_ge_100ps;
+                }
+            }
+        }
+        // Cheat south
+        if (time_by_location.contains({track_element.row + 2, track_element.col})) {
+            const auto nominal_time_at_location =
+                time_by_location[{track_element.row + 2, track_element.col}];
+            if (nominal_time_at_location > time + 2) {
+                // Good cheat south
+                if (nominal_time_at_location - time - 2 >= 100) {
+                    ++num_cheats_ge_100ps;
+                }
+            }
+        }
+        // Cheat west
+        if (track_element.col >= 2 &&
+            time_by_location.contains({track_element.row, track_element.col - 2})) {
+            const auto nominal_time_at_location =
+                time_by_location[{track_element.row, track_element.col - 2}];
+            if (nominal_time_at_location > time + 2) {
+                // Good cheat west
+                if (nominal_time_at_location - time - 2 >= 100) {
+                    ++num_cheats_ge_100ps;
+                }
+            }
+        }
+    }
+
+    std::println("Part 1: {}", num_cheats_ge_100ps);
+
+    return 0;
+}

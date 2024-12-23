@@ -42,3 +42,4 @@ target_link_libraries(day18 PRIVATE absl::strings)
 add_executable(day19 src/day19.cpp)
 target_link_libraries(day19 PRIVATE absl::strings)
 
+add_executable(day20 src/day20.cpp)
