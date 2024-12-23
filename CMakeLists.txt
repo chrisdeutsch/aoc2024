@@ -35,3 +35,6 @@ add_executable(day16 src/day16.cpp)
 add_executable(day17 src/day17.cpp)
 target_link_libraries(day17 PRIVATE absl::strings)
 
+add_executable(day18 src/day18.cpp)
+target_link_libraries(day18 PRIVATE absl::strings)
+
