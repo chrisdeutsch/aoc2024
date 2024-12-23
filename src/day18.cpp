@@ -107,39 +107,35 @@ std::optional<std::size_t> shortest_path(const maze &m) {
 
 int main() {
     const auto corrupted_bytes = read_input(std::cin);
-
-    // Example
-    /*std::set<position> walls(corrupted_bytes.cbegin(), corrupted_bytes.cbegin() + 12);*/
-    /**/
-    /*maze m = {*/
-    /*    .width = 7,*/
-    /*    .height = 7,*/
-    /*    .walls = walls,*/
-    /*    .start = {0, 0},*/
-    /*    .end = {6, 6},*/
-    /*};*/
-    /*print_maze(6, 6, walls);*/
-    /**/
-    /*const auto out = shortest_path(m);*/
-    /*if (out) {*/
-    /*    std::println("Part 1: {}", *out);*/
-    /*}*/
-
-    // Full input
     std::set<position> walls(corrupted_bytes.cbegin(), corrupted_bytes.cbegin() + 1024);
 
     maze m = {
         .width = 71,
         .height = 71,
-        .walls = walls,
+        .walls = std::move(walls),
         .start = {0, 0},
         .end = {70, 70},
     };
-    print_maze(71, 71, walls);
+    print_maze(71, 71, m.walls);
 
     const auto out = shortest_path(m);
     if (out) {
         std::println("Part 1: {}", *out);
+    }
+
+    // Part 2 (brute force)
+    // TODO: Smarter approach would be to check if the byte is on the shortest path from the
+    // previous iteration. If not -> skip the iteration.
+    std::size_t n = 0;
+    while (true) {
+        const auto byte = corrupted_bytes.at(1024 + n);
+        m.walls.insert(byte);
+        const auto out2 = shortest_path(m);
+        if (!out2) {
+            std::println("Part 2: {},{}", byte.col, byte.row);
+            break;
+        }
+        ++n;
     }
 
     return 0;
