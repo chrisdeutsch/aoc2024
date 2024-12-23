@@ -1,15 +1,25 @@
 #include <absl/strings/str_split.h>
+#include <boost/functional/hash.hpp>
 #include <cmath>
 #include <iostream>
 #include <print>
 #include <queue>
-#include <set>
 #include <string>
+#include <unordered_set>
 
 struct position {
     std::size_t row;
     std::size_t col;
     constexpr auto operator<=>(const position &other) const = default;
+};
+
+template <> struct std::hash<position> {
+    std::size_t operator()(const position &k) const {
+        std::size_t seed = 0;
+        boost::hash_combine(seed, boost::hash_value(k.row));
+        boost::hash_combine(seed, boost::hash_value(k.col));
+        return seed;
+    }
 };
 
 struct pathfinding_state {
@@ -24,7 +34,7 @@ struct pathfinding_state {
 struct maze {
     std::size_t width;
     std::size_t height;
-    std::set<position> walls;
+    std::unordered_set<position> walls;
     position start;
     position end;
 };
@@ -39,7 +49,8 @@ std::vector<position> read_input(std::istream &is) {
     return corrupted_bytes;
 }
 
-void print_maze(std::size_t width, std::size_t height, const std::set<position> &corrupted_bytes) {
+void print_maze(std::size_t width, std::size_t height,
+                const std::unordered_set<position> &corrupted_bytes) {
     for (std::size_t row = 0; row < height; ++row) {
         for (std::size_t col = 0; col < width; ++col) {
             if (corrupted_bytes.contains({row, col})) {
@@ -71,7 +82,7 @@ std::optional<position> move(position start, int delta_row, int delta_col, std::
 
 std::optional<std::size_t> shortest_path(const maze &m) {
     std::optional<std::size_t> shortest_so_far;
-    std::set<position> visited;
+    std::unordered_set<position> visited;
     std::priority_queue<pathfinding_state, std::vector<pathfinding_state>,
                         std::greater<pathfinding_state>>
         queue;
@@ -107,7 +118,7 @@ std::optional<std::size_t> shortest_path(const maze &m) {
 
 int main() {
     const auto corrupted_bytes = read_input(std::cin);
-    std::set<position> walls(corrupted_bytes.cbegin(), corrupted_bytes.cbegin() + 1024);
+    std::unordered_set<position> walls(corrupted_bytes.cbegin(), corrupted_bytes.cbegin() + 1024);
 
     maze m = {
         .width = 71,
@@ -127,7 +138,8 @@ int main() {
     std::size_t max = corrupted_bytes.size() - 1;
     while (min + 1 < max) {
         const auto midpoint = (max + min) / 2;
-        m.walls = std::set<position>(corrupted_bytes.cbegin(), corrupted_bytes.cbegin() + midpoint);
+        m.walls = std::unordered_set<position>(corrupted_bytes.cbegin(),
+                                               corrupted_bytes.cbegin() + midpoint);
         if (shortest_path(m)) {
             min = midpoint;
         } else {
