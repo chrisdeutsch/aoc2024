@@ -116,27 +116,25 @@ int main() {
         .start = {0, 0},
         .end = {70, 70},
     };
-    print_maze(71, 71, m.walls);
 
     const auto out = shortest_path(m);
     if (out) {
         std::println("Part 1: {}", *out);
     }
 
-    // Part 2 (brute force)
-    // TODO: Smarter approach would be to check if the byte is on the shortest path from the
-    // previous iteration. If not -> skip the iteration.
-    std::size_t n = 0;
-    while (true) {
-        const auto byte = corrupted_bytes.at(1024 + n);
-        m.walls.insert(byte);
-        const auto out2 = shortest_path(m);
-        if (!out2) {
-            std::println("Part 2: {},{}", byte.col, byte.row);
-            break;
+    // Part 2 (using binary search)
+    std::size_t min = 1024;
+    std::size_t max = corrupted_bytes.size() - 1;
+    while (min + 1 < max) {
+        const auto midpoint = (max + min) / 2;
+        m.walls = std::set<position>(corrupted_bytes.cbegin(), corrupted_bytes.cbegin() + midpoint);
+        if (shortest_path(m)) {
+            min = midpoint;
+        } else {
+            max = midpoint;
         }
-        ++n;
     }
+    std::println("Part 2: {},{}", corrupted_bytes[max - 1].col, corrupted_bytes[max - 1].row);
 
     return 0;
 }
