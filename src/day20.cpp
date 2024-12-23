@@ -1,5 +1,4 @@
 #include <iostream>
-#include <map>
 #include <print>
 #include <ranges>
 #include <set>
@@ -85,67 +84,41 @@ std::vector<position> order_track_elements(const racetrack &rt) {
     return track_elements_ordered;
 }
 
+std::size_t manhatten_distance(position a, position b) {
+    const auto delta_row = a.row > b.row ? a.row - b.row : b.row - a.row;
+    const auto delta_col = a.col > b.col ? a.col - b.col : b.col - a.col;
+    return delta_row + delta_col;
+}
+
+std::size_t get_number_of_cheats(const racetrack &rt, std::size_t cheat_len) {
+    const std::size_t threshold = 100;
+    std::size_t number_of_cheats = 0;
+
+    for (const auto [start_time, start_track_element] : rt.track | std::views::enumerate) {
+        for (const auto [end_time, end_track_element] :
+             rt.track | std::views::enumerate | std::views::drop(start_time + 1)) {
+            const auto dist = manhatten_distance(start_track_element, end_track_element);
+            if (dist > cheat_len || end_time <= start_time + dist) {
+                continue;
+            }
+            const auto time_saved = end_time - start_time - dist;
+            if (time_saved >= threshold) {
+                ++number_of_cheats;
+            }
+        }
+    }
+    return number_of_cheats;
+}
+
 int main() {
     auto rt = read_input(std::cin);
     rt.track = order_track_elements(rt);
 
-    std::map<position, std::size_t> time_by_location;
-    for (const auto [time, track_element] : rt.track | std::views::enumerate) {
-        time_by_location[track_element] = time;
-    }
+    const std::size_t num_cheats_pt1 = get_number_of_cheats(rt, 2);
+    std::println("Part 1: {}", num_cheats_pt1);
 
-    std::size_t num_cheats_ge_100ps = 0;
-
-    for (const auto [time, track_element] : rt.track | std::views::enumerate) {
-        // Cheat north
-        if (track_element.row >= 2 &&
-            time_by_location.contains({track_element.row - 2, track_element.col})) {
-            const auto nominal_time_at_location =
-                time_by_location[{track_element.row - 2, track_element.col}];
-            if (nominal_time_at_location > time + 2) {
-                // Good cheat north
-                if (nominal_time_at_location - time - 2 >= 100) {
-                    ++num_cheats_ge_100ps;
-                }
-            }
-        }
-        // Cheat east
-        if (time_by_location.contains({track_element.row, track_element.col + 2})) {
-            const auto nominal_time_at_location =
-                time_by_location[{track_element.row, track_element.col + 2}];
-            if (nominal_time_at_location > time + 2) {
-                // Good cheat east
-                if (nominal_time_at_location - time - 2 >= 100) {
-                    ++num_cheats_ge_100ps;
-                }
-            }
-        }
-        // Cheat south
-        if (time_by_location.contains({track_element.row + 2, track_element.col})) {
-            const auto nominal_time_at_location =
-                time_by_location[{track_element.row + 2, track_element.col}];
-            if (nominal_time_at_location > time + 2) {
-                // Good cheat south
-                if (nominal_time_at_location - time - 2 >= 100) {
-                    ++num_cheats_ge_100ps;
-                }
-            }
-        }
-        // Cheat west
-        if (track_element.col >= 2 &&
-            time_by_location.contains({track_element.row, track_element.col - 2})) {
-            const auto nominal_time_at_location =
-                time_by_location[{track_element.row, track_element.col - 2}];
-            if (nominal_time_at_location > time + 2) {
-                // Good cheat west
-                if (nominal_time_at_location - time - 2 >= 100) {
-                    ++num_cheats_ge_100ps;
-                }
-            }
-        }
-    }
-
-    std::println("Part 1: {}", num_cheats_ge_100ps);
+    const std::size_t num_cheats_pt2 = get_number_of_cheats(rt, 20);
+    std::println("Part 2: {}", num_cheats_pt2);
 
     return 0;
 }
