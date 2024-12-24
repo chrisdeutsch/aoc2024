@@ -38,26 +38,6 @@ constexpr std::size_t generate_nth(std::size_t secret_number, std::size_t n) {
     return secret_number;
 }
 
-std::vector<uint8_t> get_prices(std::size_t secret_number, std::size_t n) {
-    std::vector<uint8_t> prices = {static_cast<uint8_t>(secret_number % 10)};
-    prices.reserve(n + 1);
-
-    for (std::size_t i = 0; i < n; ++i) {
-        secret_number = generate_next(secret_number);
-        prices.push_back(secret_number % 10);
-    }
-
-    return prices;
-}
-
-std::vector<int8_t> get_differences(const std::span<const uint8_t> prices) {
-    std::vector<int8_t> differences;
-    for (const auto [a, b] : std::views::zip(prices, prices | std::views::drop(1))) {
-        differences.push_back(static_cast<int8_t>(b) - a);
-    }
-    return differences;
-}
-
 using diff_sequence = std::array<int8_t, 4>;
 
 template <> struct std::hash<diff_sequence> {
@@ -71,6 +51,31 @@ template <> struct std::hash<diff_sequence> {
     }
 };
 
+std::unordered_map<diff_sequence, uint8_t> get_thing(std::size_t secret_number, std::size_t n) {
+    std::unordered_map<diff_sequence, uint8_t> m;
+
+    diff_sequence current_seq = {0, 0, 0, 0};
+    for (std::size_t i = 0; i < n; ++i) {
+        const auto current_price = secret_number % 10;
+        const auto next_number = generate_next(secret_number);
+        const auto next_price = next_number % 10;
+        const auto difference = static_cast<int8_t>(next_price) - current_price;
+
+        current_seq[0] = current_seq[1];
+        current_seq[1] = current_seq[2];
+        current_seq[2] = current_seq[3];
+        current_seq[3] = difference;
+
+        // Sell on first match
+        if (i >= 3 && !m.contains(current_seq)) {
+            m[current_seq] = next_number % 10;
+        }
+        secret_number = next_number;
+    }
+
+    return m;
+}
+
 int main() {
     const auto secret_numbers = read_input(std::cin);
 
@@ -81,25 +86,11 @@ int main() {
     std::println("Part 1: {}", total);
 
     // Part 2 (brute force)
-    using diff_sequence = std::array<int8_t, 4>;
     std::vector<std::unordered_map<diff_sequence, uint8_t>> earnings_map;
     earnings_map.reserve(secret_numbers.size());
 
     for (const auto num : secret_numbers) {
-        std::unordered_map<diff_sequence, uint8_t> sequence_to_price;
-
-        const auto prices = get_prices(num, 2000);
-        const auto differences = get_differences(prices);
-
-        for (auto it_start = differences.cbegin(), it_end = differences.cbegin() + 4;
-             it_end != differences.cend(); ++it_start, ++it_end) {
-            const diff_sequence key = {it_start[0], it_start[1], it_start[2], it_start[3]};
-            if (auto it = sequence_to_price.find(key); it == sequence_to_price.cend()) {
-                const auto dist = std::distance(differences.cbegin(), it_start + 3);
-                sequence_to_price[key] = prices[dist + 1];
-            }
-        }
-        earnings_map.emplace_back(std::move(sequence_to_price));
+        earnings_map.emplace_back(get_thing(num, 2000));
     }
 
     std::unordered_set<diff_sequence> sequences_seen;
