@@ -1,9 +1,7 @@
+#include <algorithm>
 #include <boost/functional/hash.hpp>
 #include <iostream>
 #include <print>
-#include <ranges>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 std::vector<std::size_t> read_input(std::istream &is) {
@@ -40,19 +38,19 @@ constexpr std::size_t generate_nth(std::size_t secret_number, std::size_t n) {
 
 using diff_sequence = std::array<int8_t, 4>;
 
-template <> struct std::hash<diff_sequence> {
-    std::size_t operator()(const diff_sequence &seq) const {
-        std::size_t seed = 0;
-        boost::hash_combine(seed, boost::hash_value(seq[0]));
-        boost::hash_combine(seed, boost::hash_value(seq[1]));
-        boost::hash_combine(seed, boost::hash_value(seq[2]));
-        boost::hash_combine(seed, boost::hash_value(seq[3]));
-        return seed;
+constexpr std::size_t map_diff_sequence_to_index(const diff_sequence &seq) {
+    std::size_t total = 0;
+    std::size_t base = 1;
+    for (std::size_t i = 0; i < 4; ++i) {
+        total += (seq[i] + 9uz) * base;
+        base *= 19uz;
     }
-};
+    return total;
+}
 
-std::unordered_map<diff_sequence, uint8_t> get_thing(std::size_t secret_number, std::size_t n) {
-    std::unordered_map<diff_sequence, uint8_t> m;
+template <std::size_t N>
+void get_earnings(std::size_t secret_number, std::size_t n, std::array<std::size_t, N> &price) {
+    std::array<bool, N> sold{};
 
     diff_sequence current_seq = {0, 0, 0, 0};
     for (std::size_t i = 0; i < n; ++i) {
@@ -66,14 +64,13 @@ std::unordered_map<diff_sequence, uint8_t> get_thing(std::size_t secret_number, 
         current_seq[2] = current_seq[3];
         current_seq[3] = difference;
 
-        // Sell on first match
-        if (i >= 3 && !m.contains(current_seq)) {
-            m[current_seq] = next_number % 10;
+        // Sell only on first match
+        if (const auto idx = map_diff_sequence_to_index(current_seq); i >= 3 && !sold[idx]) {
+            price[idx] += next_number % 10;
+            sold[idx] = true;
         }
         secret_number = next_number;
     }
-
-    return m;
 }
 
 int main() {
@@ -86,31 +83,12 @@ int main() {
     std::println("Part 1: {}", total);
 
     // Part 2 (brute force)
-    std::vector<std::unordered_map<diff_sequence, uint8_t>> earnings_map;
-    earnings_map.reserve(secret_numbers.size());
-
+    constexpr std::size_t array_size = map_diff_sequence_to_index({9uz, 9uz, 9uz, 9uz}) + 1uz;
+    std::array<std::size_t, array_size> price_total{};
     for (const auto num : secret_numbers) {
-        earnings_map.emplace_back(get_thing(num, 2000));
+        get_earnings(num, 2000, price_total);
     }
-
-    std::unordered_set<diff_sequence> sequences_seen;
-    for (const auto &sequence_to_price : earnings_map) {
-        std::transform(sequence_to_price.cbegin(), sequence_to_price.cend(),
-                       std::inserter(sequences_seen, std::end(sequences_seen)),
-                       [](const auto &elem) { return elem.first; });
-    }
-
-    std::size_t max = 0;
-    for (const auto &sequence : sequences_seen) {
-        std::size_t total = 0;
-        for (const auto &elem : earnings_map) {
-            if (auto it = elem.find(sequence); it != elem.cend()) {
-                total += it->second;
-            }
-        }
-        max = std::max(max, total);
-    }
-    std::println("Part 2: {}", max);
+    std::println("Part 2: {}", std::ranges::max(price_total));
 
     return 0;
 }
